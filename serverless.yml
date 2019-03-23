@@ -1,0 +1,56 @@
+service: commensal-chat-service
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stage: dev
+  region: eu-west-1
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource:
+        - arn:aws:dynamodb:eu-west-1:959782623357:table/commensal-match
+  websocketsApiName: custom-websockets-api-name
+  websocketsApiRouteSelectionExpression: $request.body.action
+  
+  environment:
+    REGION: ${self:provider.region}
+    TABLE_NAME: commensal-match
+
+functions:
+  connectionHandler:
+    handler: handler.connectHandler
+    events:
+      - websocket:
+          route: $connect
+          authorizer:
+            name: userRequestAuthorizer
+            identitySource:
+              - 'route.request.header.Auth'
+  disconnectionHandler:
+    handler: handler.disconnectHandler
+    events:
+      - websocket:
+          route: $disconnect
+  defaultHandler:
+    handler: handler.defaultHandler
+    events:
+      - websocket: $default
+  messageHandler:
+    handler: handler.messageHandler
+    events:
+      - websocket:
+          route: message
+  typingHandler:
+    handler: handler.typingHandler
+    events:
+      - websocket:
+          route: typing
+  userRequestAuthorizer:
+    handler: handler.userRequestAuthorizer
